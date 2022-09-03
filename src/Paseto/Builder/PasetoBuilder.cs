@@ -38,7 +38,7 @@ public sealed class PasetoBuilder
         }
     };
 
-    private IJsonSerializer _serializer = new JsonNetSerializer();
+    private IJsonSerializer _serializer = new TextJsonSerializer();
     //private IBase64UrlEncoder _urlEncoder = new Base64UrlEncoder();
 
     private IPasetoProtocolVersion _protocol;

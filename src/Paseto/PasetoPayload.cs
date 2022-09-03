@@ -14,9 +14,9 @@ public class PasetoPayload : Dictionary<string, object>
 {
     private IJsonSerializer _serializer;
 
-    public PasetoPayload() => _serializer = new JsonNetSerializer();
+    public PasetoPayload() => _serializer = new TextJsonSerializer();
 
-    public PasetoPayload(IJsonSerializer serializer = null) => _serializer = serializer ?? new JsonNetSerializer();
+    public PasetoPayload(IJsonSerializer serializer = null) => _serializer = serializer ?? new TextJsonSerializer();
 
     /// <summary>
     /// Serializes this instance to JSON.
