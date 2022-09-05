@@ -25,11 +25,10 @@ app.MapPost("/get-token/{name}", (string name) =>
 {
     return new PasetoBuilder().Use(version, purpose)
                                .WithKey(pasetoKey)
-                               .AddClaim("data", "this is a secret message")
                                .AddClaim("name", name)
-                               .Issuer("localhost:701")
-                               .Subject("PASETO-DEMO")
                                .Audience("paseto.io")
+                               .Issuer("localhost:5050")
+                               .Subject("PASETO-DEMO")
                                .NotBefore(DateTime.UtcNow)
                                .IssuedAt(DateTime.UtcNow)
                                .Expiration(DateTime.UtcNow.AddHours(1))
@@ -40,22 +39,24 @@ app.MapPost("/get-token/{name}", (string name) =>
 
 app.MapGet("/decode/{token}", (string token) =>
 {
+    var validationParameters = new PasetoTokenValidationParameters
+    {
+        ValidateAudience = true,
+        ValidateIssuer = true,
+        ValidateLifetime = true,
+        ValidateSubject = true,
+        ValidAudience = "paseto.io",
+        ValidIssuer = "localhost:5050",
+        ValidSubject = "PASETO-DEMO",
+    };
+
     var response = new PasetoBuilder().Use(version, purpose)
                               .WithKey(pasetoKey)
-                              .Decode(token, new PasetoTokenValidationParameters()
-                              {
-                                  ValidateAudience = true,
-                                  ValidateIssuer = true,
-                                  ValidateLifetime = true,
-                                  ValidateSubject = true,
-                                  ValidAudience = "paseto.io",
-                                  ValidIssuer = "localhost:701",
-                                  ValidSubject = "PASETO-DEMO",
-                              });
-    if (response.IsValid)
-        return Results.Ok(response.Paseto.Payload);
+                              .Decode(token, validationParameters);
+    if (!response.IsValid)
+        return Results.BadRequest($"Invalid access token: {response.Exception}");
 
-    return Results.BadRequest($"Invalid access token: {response.Exception}");
+    return Results.Ok(response.Paseto.Payload);
 });
 
 app.Run();
