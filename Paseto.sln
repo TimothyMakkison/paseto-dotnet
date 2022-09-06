@@ -15,13 +15,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
-		README.md = README.md
+		appveyor.yml = appveyor.yml
 		build.cake = build.cake
-		global.json = global.json
 		CodeCoverage.runsettings = CodeCoverage.runsettings
 		dotnet-tools.json = dotnet-tools.json
-		appveyor.yml = appveyor.yml
+		global.json = global.json
+		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{1D9CC5EC-7858-4B10-99BE-CDE4481DE893}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,6 +39,10 @@ Global
 		{2FAB1426-5BDB-4835-9323-676F3E286D57}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FAB1426-5BDB-4835-9323-676F3E286D57}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FAB1426-5BDB-4835-9323-676F3E286D57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D9CC5EC-7858-4B10-99BE-CDE4481DE893}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D9CC5EC-7858-4B10-99BE-CDE4481DE893}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D9CC5EC-7858-4B10-99BE-CDE4481DE893}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D9CC5EC-7858-4B10-99BE-CDE4481DE893}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,6 +50,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{AF52242B-5578-4D7D-AB4E-22ED6BF5F3F8} = {C0AB8266-F1F2-43C3-9D0B-0FE7EBAEAC70}
 		{2FAB1426-5BDB-4835-9323-676F3E286D57} = {1313DA53-FE67-4E72-8CE2-BEEE48276907}
+		{1D9CC5EC-7858-4B10-99BE-CDE4481DE893} = {C0AB8266-F1F2-43C3-9D0B-0FE7EBAEAC70}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {24CC8E07-0D90-436B-ABC1-E088813D210A}

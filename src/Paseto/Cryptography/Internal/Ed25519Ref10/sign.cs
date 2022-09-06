@@ -1,6 +1,7 @@
 ﻿namespace Paseto.Cryptography.Internal.Ed25519Ref10;
 
 using System;
+using System.Security.Cryptography;
 using Paseto.Extensions;
 
 internal static partial class Ed25519Operations
@@ -40,20 +41,31 @@ internal static partial class Ed25519Operations
         Array.Copy(sm32, 0, sm, 32, 32);
     }*/
 
-    internal static void crypto_sign2(byte[] sig, int sigoffset, byte[] m, int moffset, int mlen, byte[] sk, int skoffset)
+    internal static void crypto_sign2(Span<byte> sig, ReadOnlySpan<byte> m, ReadOnlySpan<byte> sk)
     {
+        var sigoffset = 0;
+        var moffset = 0;
+        var mlen = m.Length;
+        var skoffset = 0;
+
         byte[] az;
         byte[] r;
         byte[] hram;
+
         var hasher = new Sha512();
         {
-            hasher.Update(sk, skoffset, 32);
+            hasher.Update(sk, 0, 32);
             az = hasher.Finish();
             ScalarOperations.sc_clamp(az, 0);
 
             hasher.Init();
-            hasher.Update(az, 32, 32);
-            hasher.Update(m, moffset, mlen);
+            var combo = new byte[32+mlen].AsSpan();
+            SpanExtensions.Copy(az, 32, combo, 0, 32);
+            SpanExtensions.Copy(m, 0, combo, 32, mlen);
+
+            //hasher.Update(az, 32, 32);
+            //hasher.Update(m, 0, mlen);
+            hasher.Update(combo);
             r = hasher.Finish();
 
             ScalarOperations.sc_reduce(r);

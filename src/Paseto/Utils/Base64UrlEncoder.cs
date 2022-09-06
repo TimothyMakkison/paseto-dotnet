@@ -10,12 +10,12 @@ using System;
 /// </summary>
 public class Base64UrlEncoder : IBase64UrlEncoder
 {
-    private static readonly char OnePadChar = '=';
-    private static readonly string TwoPadChar = "==";
-    private static readonly char Char62 = '+';
-    private static readonly char Char63 = '/';
-    private static readonly char UrlChar62 = '-';
-    private static readonly char UrlChar63 = '_';
+    private const char OnePadChar = '=';
+    private const string TwoPadChar = "==";
+    private const char Char62 = '+';
+    private const char Char63 = '/';
+    private const char UrlChar62 = '-';
+    private const char UrlChar63 = '_';
 
     private static readonly char[] OnePads = { OnePadChar };
 
@@ -41,8 +41,43 @@ public class Base64UrlEncoder : IBase64UrlEncoder
     /// <returns>Base64Url encoding of the UTF8 bytes.</returns>
     public string Encode(ReadOnlySpan<byte> input, PaddingPolicy policy = PaddingPolicy.Discard)
     {
-        var encoded = Convert.ToBase64String(input).Replace(Char62, UrlChar62).Replace(Char63, UrlChar63);
+        Span<char> span = Convert.ToBase64String(input).ToCharArray();
+
         if (policy == PaddingPolicy.Discard)
+        {
+            var j = span.Length - 1;
+            while (span[j] == OnePadChar && j>0)
+            {
+                j--;
+            }
+
+            span = span.Slice(0, j+1);
+        }
+        
+        for (int i = 0; i < span.Length; i++)
+        {
+            span[i] = span[i] switch
+            {
+                Char62 => UrlChar62,
+                Char63 => UrlChar63,
+                _ => span[i],
+            };
+        }
+
+        var s = new string(span);
+        var act = encode(input);
+        if (s!= act)
+        {
+
+        }
+
+        return s;
+    }
+
+    public string encode(ReadOnlySpan<byte> input)
+    {
+        var encoded = Convert.ToBase64String(input).Replace(Char62, UrlChar62).Replace(Char63, UrlChar63);
+        if (true)
             encoded = encoded.TrimEnd(OnePads);
 
         return encoded;

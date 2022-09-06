@@ -342,7 +342,7 @@ public class Version4 : PasetoProtocolVersion, IPasetoProtocolVersion
         var header = $"{Version}.{Purpose.Public.ToDescription()}.";
         var pack = PreAuthEncode(new[] { header, payload, footer, assertion });
 
-        var signature = Ed25519.Sign(pack, pasetoKey.Key.ToArray());
+        var signature = Ed25519.Sign(pack, pasetoKey.Key.Span);
 
         if (!string.IsNullOrEmpty(footer))
             footer = $".{ToBase64Url(GetBytes(footer))}";
