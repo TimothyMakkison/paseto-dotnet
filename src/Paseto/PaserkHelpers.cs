@@ -7,11 +7,14 @@ using Org.BouncyCastle.Crypto.Digests;
 using Paseto;
 using Paseto.Cryptography.Internal;
 using Paseto.Cryptography.Key;
+using Paseto.Extensions;
 using Paseto.PaserkOperations;
+using Paseto.PaserkOperations.Wrap;
 using static Paseto.Utils.EncodingHelper;
 
 internal static class PaserkHelpers
 {
+    private const string PARSEK_HEADER_K = "k";
     private const string RSA_PKCS1_ALG_IDENTIFIER = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A";
 
     private const int SYM_KEY_SIZE_IN_BYTES = 32;
@@ -48,7 +51,6 @@ internal static class PaserkHelpers
         return $"{header}{keyString}";
     }
 
-    // TODO Refactor IdEncode to call SimpleEncode.
     internal static string IdEncode(string header, PaserkType type, PasetoKey pasetoKey)
     {
         var version = StringToVersion(pasetoKey.Protocol.Version);
@@ -142,6 +144,26 @@ internal static class PaserkHelpers
         return $"{header}{ToBase64Url(data)}";
     }
 
+    public static string WrapPieEncode(PaserkType paserkType, PasetoKey pasetoKey, PasetoSymmetricKey wrappingKey)
+    {
+        if (pasetoKey.Protocol.Version != wrappingKey.Protocol.Version)
+            throw new ArgumentException($"Key types {nameof(pasetoKey)} and {nameof(wrappingKey)} should have the same protocol version. {nameof(pasetoKey)} has version {pasetoKey.Protocol.Version} whereas {nameof(wrappingKey)} has version {wrappingKey.Protocol.Version}.");
+        var version = StringToVersion(pasetoKey.Protocol.Version);
+
+        if (paserkType is PaserkType.LocalWrap && pasetoKey.Key.Length != SYM_KEY_SIZE_IN_BYTES)
+            throw new ArgumentException("");
+
+        var header = $"{PARSEK_HEADER_K}{pasetoKey.Protocol.VersionNumber}.{paserkType.ToDescription()}.pie.";
+        var headerBytes = Encoding.UTF8.GetBytes(header);
+
+        return version switch
+        {
+            ProtocolVersion.V1 or ProtocolVersion.V3 => $"{header}{Pie.AesEncrypt(headerBytes, pasetoKey.Key.ToArray(), wrappingKey.Key.ToArray())}",
+            ProtocolVersion.V2 or ProtocolVersion.V4 => $"{header}{Pie.ChaChaEncrypt(headerBytes, pasetoKey.Key.ToArray(), wrappingKey.Key.ToArray())}",
+            _ => throw new NotImplementedException(),
+        };
+    }
+
     internal static PasetoKey SimpleDecode(PaserkType type, ProtocolVersion version, string encodedKey)
     {
         var protocolVersion = Paserk.CreateProtocolVersion(version);
@@ -171,11 +193,9 @@ internal static class PaserkHelpers
 
     internal static PasetoKey PwDecode(PaserkType type, ProtocolVersion version, string paserk, string password)
     {
-        // TODO Assert type matches.
         var split = paserk.Split('.');
         var header = $"{split[0]}.{split[1]}.";
 
-        //var passwordBytes = Encoding.UTF8.GetBytes(password);
         var bytes = FromBase64Url(split[2]);
 
         byte[] ptk;
@@ -225,6 +245,39 @@ internal static class PaserkHelpers
 
             _ => throw new NotSupportedException()
         };
+    }
+
+    internal static PasetoKey WrapDecode(PaserkType type, ProtocolVersion version, string paserk, PasetoSymmetricKey wrappingKey)
+    {
+        var split = paserk.Split(".");
+        var data = split[^1];
+
+        var headerBytes = Encoding.UTF8.GetBytes(paserk.Replace(data, ""));
+        var dataBytes = FromBase64Url(data);
+        var dS = Convert.ToHexString(dataBytes);
+
+        var ptk = version switch
+        {
+            ProtocolVersion.V1 or ProtocolVersion.V3 => Pie.AesDecrypt(headerBytes, dataBytes, wrappingKey.Key.ToArray()),
+            ProtocolVersion.V2 or ProtocolVersion.V4 => Pie.ChaChaDecrypt(headerBytes, dataBytes, wrappingKey.Key.ToArray()),
+            _ => throw new NotImplementedException(),
+        };
+
+        var protocolVersion = Paserk.CreateProtocolVersion(version);
+
+        if (type is PaserkType.LocalWrap)
+        {
+            var key = new PasetoSymmetricKey(ptk, protocolVersion);
+            if (key.Key.Length != 32)
+                throw new PaserkInvalidException($"Error creating {nameof(PasetoSymmetricKey)}, length must be 32, found {key.Key.Length} instead.");
+            return key;
+        }
+        else if (type is PaserkType.SecretWrap)
+        {
+            var key = new PasetoAsymmetricSecretKey(ptk, protocolVersion);
+            return key;
+        }
+        throw new InvalidOperationException();
     }
 
     // TODO: Check Public V3 has valid point compression.
