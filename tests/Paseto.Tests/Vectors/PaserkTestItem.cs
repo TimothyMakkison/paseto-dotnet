@@ -21,5 +21,8 @@ public class PaserkTestItem
     [JsonProperty("expect-fail")]
     public bool ExpectFail { get; set; }
 
+    [JsonProperty("wrapping-key")]
+    public string WrappingKey { get; set; }
+
     public string Comment { get; set; }
 }

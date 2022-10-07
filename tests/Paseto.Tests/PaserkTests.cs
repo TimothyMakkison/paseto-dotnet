@@ -62,7 +62,16 @@ public class PaserkTests
         {
             foreach (var type in types)
             {
-                var json = GetPaserkTestVector((int)version, type.ToDescription());
+                string json;
+                if (type is not PaserkType.LocalWrap and not PaserkType.SecretWrap)
+                {
+                    json = GetPaserkTestVector((int)version, type.ToDescription());
+
+                }
+                else
+                {
+                    json = GetPaserkTestVector((int)version, $"{type.ToDescription()}.pie");
+                }
 
                 var vector = JsonConvert.DeserializeObject<PaserkTestCollection>(json);
                 foreach (var test in vector.Tests)
@@ -192,6 +201,46 @@ public class PaserkTests
         var unwrapped = Paserk.Decode(wrapped, test.Password);
         unwrapped.Key.Span.ToArray().Should().BeEquivalentTo(pasetoKey.Key.ToArray());
     }
+    public static IEnumerable<object[]> WrapGenerator => TestItemGenerator(new ProtocolVersion[] { ProtocolVersion.V1, ProtocolVersion.V2, ProtocolVersion.V3, ProtocolVersion.V4 }, new PaserkType[] { PaserkType.LocalWrap, PaserkType.SecretWrap });
+
+    [Theory]
+    [MemberData(nameof(WrapGenerator))]
+    public void TestWrapVectors(PaserkTestItem test, ProtocolVersion version, PaserkType type)
+    {
+        // Paserk implementation is not version specific so we skip this test.
+        if (test is { ExpectFail: true, Comment: "Implementations MUST NOT accept a PASERK of the wrong version." })
+        {
+            return;
+        }
+
+        if (test.ExpectFail)
+        {
+            var act = () =>
+            {
+                var wrappingKey = (PasetoSymmetricKey)ParseKey(version, PaserkType.Local, test.WrappingKey);
+
+                var key = ParseKey(version, type, test.Key);
+                Paserk.Decode(test.Paserk, wrappingKey);
+            };
+
+            act.Should().Throw<Exception>();
+            return;
+        }
+
+        var wrappingKey = (PasetoSymmetricKey)ParseKey(version, PaserkType.Local, test.WrappingKey);
+        var purpose = Paserk.GetCompatibility(type);
+        var pasetoKey = ParseKey(version, type, test.Unwrapped);
+
+        // Decode paserk to verify decoding works
+        var decoded = Paserk.Decode(test.Paserk, wrappingKey);
+        decoded.Key.Span.ToArray().Should().BeEquivalentTo(pasetoKey.Key.ToArray());
+
+        // Encode then decode to verify that encoding works
+        var wrapped = Paserk.Encode(pasetoKey, type, wrappingKey);
+
+        var unwrapped = Paserk.Decode(wrapped, wrappingKey);
+        unwrapped.Key.Span.ToArray().Should().BeEquivalentTo(pasetoKey.Key.ToArray());
+    }
 
     [Theory]
     [MemberData(nameof(Data))]
@@ -233,10 +282,7 @@ public class PaserkTests
             case PaserkType.Local or PaserkType.Lid or PaserkType.LocalPassword:
                 return new PasetoSymmetricKey(CryptoBytes.FromHexString(key), Paserk.CreateProtocolVersion(version));
 
-            case PaserkType.SecretWrap:
-                break;
-
-            case PaserkType.Secret or PaserkType.Sid or PaserkType.SecretPassword:
+            case PaserkType.SecretWrap or PaserkType.Secret or PaserkType.Sid or PaserkType.SecretPassword:
                 return new PasetoAsymmetricSecretKey(TestHelper.ReadKey(key), Paserk.CreateProtocolVersion(version));
 
             case PaserkType.Public or PaserkType.Pid:
